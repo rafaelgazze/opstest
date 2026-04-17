@@ -1,0 +1,9 @@
+framework:
+  - terraform
+directory:
+  - .
+skip-check:
+  # ALB access logging - out of scope for dev demo, would enable for prod
+  - CKV_AWS_91
+  # ALB WAF association - out of scope for dev
+  - CKV2_AWS_28
