@@ -95,7 +95,7 @@ On the next deployment the colours reverse: green becomes active, blue is the id
 | **Green ASG** | `aws_autoscaling_group.green` | Starts idle (`Active=false`, `desired=0`). Promoted to active during each deployment. |
 | **SSM Parameter Store** | `aws_ssm_parameter` | Stores application secrets (e.g. `/suchapp/dev/suchname`). EC2 instances read parameters at startup via IAM policy. No secrets are baked into AMIs. |
 | **IAM — EC2 role** | `aws_iam_role.ec2`, `aws_iam_instance_profile.ec2` | Allows `ssm:GetParameter` on the env-scoped path. Attaches `AmazonSSMManagedInstanceCore` for SSM Session Manager access. |
-| **IAM — GitHub OIDC** | `aws_iam_openid_connect_provider.github`, `aws_iam_role.github_actions` | Allows GitHub Actions to assume a role via OIDC token without storing long-lived credentials. Scoped to `refs/heads/master`. |
+| **IAM — GitHub OIDC** | `aws_iam_openid_connect_provider.github`, `aws_iam_role.github_actions` | Allows GitHub Actions to assume a role via OIDC token without storing long-lived credentials. Scoped to `refs/heads/main`. |
 
 ---
 
@@ -108,7 +108,7 @@ On the next deployment the colours reverse: green becomes active, blue is the id
 | **EC2 placement** | Private subnets only | No instance has a public IP. All inbound traffic flows through the ALB. Outbound internet access (SSM, yum, CloudWatch) uses the NAT Gateway. Reduces attack surface. |
 | **IMDSv2** | `http_tokens = required` in launch template | Enforces session-oriented metadata requests. Prevents SSRF attacks from using the metadata service to retrieve credentials or user data. |
 | **Secrets management** | SSM Parameter Store (`SecureString`) | KMS-encrypted at rest; accessed via IAM policy; no secrets in AMIs or environment variables. Secrets Manager would be appropriate for automatic rotation — SSM is sufficient for the current secret volume. |
-| **CI/CD credentials** | GitHub OIDC federation | No IAM user keys to rotate or leak. The GitHub OIDC provider issues a short-lived token per workflow run. The assumed role is scoped to `refs/heads/master`. |
+| **CI/CD credentials** | GitHub OIDC federation | No IAM user keys to rotate or leak. The GitHub OIDC provider issues a short-lived token per workflow run. The assumed role is scoped to `refs/heads/main`. |
 | **SSH / bastion** | None — SSM Session Manager | Eliminates the need for SSH keys, bastion hosts, or open port 22. Audit logs are written to CloudTrail and can be forwarded to CloudWatch Logs. |
 | **NAT Gateway count** | Variable (`1` dev, `3` prod) | One NAT is sufficient for dev and costs ~$32/month. For production, one per AZ ensures private subnet traffic survives an AZ failure. |
 

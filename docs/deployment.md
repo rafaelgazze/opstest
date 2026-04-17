@@ -136,9 +136,9 @@ Scaling down blue
 
 ### Via GitHub Actions
 
-**Automatic build and bake** (push to `master`):
+**Automatic build and bake** (push to `main`):
 
-Pushing a commit to `master` triggers the `build.yml` workflow automatically. It:
+Pushing a commit to `main` triggers the `build.yml` workflow automatically. It:
 1. Validates Terraform (fmt, validate, tflint, checkov).
 2. Builds the JAR with Maven.
 3. Bakes an AMI with Packer (using the commit SHA as `app_version`).
