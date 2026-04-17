@@ -22,3 +22,18 @@ nbbuild/
 dist/
 nbdist/
 .nb-gradle/
+
+### Terraform ###
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+### Packer ###
+*.pkr.hcl.lock.hcl
+packer_cache/
