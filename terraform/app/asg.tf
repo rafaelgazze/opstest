@@ -37,7 +37,7 @@ resource "aws_autoscaling_group" "blue" {
   min_size            = var.asg_min
   max_size            = var.asg_max
   desired_capacity    = var.asg_desired
-  vpc_zone_identifier = aws_subnet.private[*].id
+  vpc_zone_identifier = local.private_subnet_ids
   target_group_arns   = [aws_lb_target_group.blue.arn]
 
   health_check_type         = "ELB"
@@ -77,7 +77,7 @@ resource "aws_autoscaling_group" "green" {
   min_size            = 0
   max_size            = var.asg_max
   desired_capacity    = 0
-  vpc_zone_identifier = aws_subnet.private[*].id
+  vpc_zone_identifier = local.private_subnet_ids
   target_group_arns   = [aws_lb_target_group.green.arn]
 
   health_check_type         = "ELB"

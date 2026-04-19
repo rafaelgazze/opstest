@@ -99,6 +99,26 @@ On the next deployment the colours reverse: green becomes active, blue is the id
 
 ---
 
+## Layered Terraform Architecture
+
+The Terraform code is split into two independent layers, each with its own state file:
+
+| Layer | Directory | State key | Contents | Change frequency |
+|-------|-----------|-----------|----------|-----------------|
+| **Network** | `terraform/network/` | `suchapp/<env>/network.tfstate` | VPC, subnets, NAT gateways, IGW, route tables | Rarely (initial setup) |
+| **App** | `terraform/app/` | `suchapp/<env>/app.tfstate` | ALB, ASGs, launch template, security groups, IAM, SSM | Each deployment cycle |
+
+The app layer reads network outputs (VPC ID, subnet IDs) via a `terraform_remote_state` data source. This separation provides:
+
+- **Blast radius isolation** — a misconfigured `terraform destroy` on the app layer cannot accidentally remove the VPC and NAT gateway.
+- **Faster applies** — the app layer has fewer resources to plan and refresh.
+- **Independent change cadence** — networking is stable infrastructure; the app layer changes with each AMI release.
+- **Team boundaries** — a platform team can own the network layer while application teams manage their own app layer.
+
+The deploy order is always **network first, then app**. Teardown is the reverse: **app first, then network**.
+
+---
+
 ## Design Decisions
 
 | Decision | Chosen approach | Rationale |
@@ -111,6 +131,7 @@ On the next deployment the colours reverse: green becomes active, blue is the id
 | **CI/CD credentials** | GitHub OIDC federation | No IAM user keys to rotate or leak. The GitHub OIDC provider issues a short-lived token per workflow run. The assumed role is scoped to `refs/heads/main`. |
 | **SSH / bastion** | None — SSM Session Manager | Eliminates the need for SSH keys, bastion hosts, or open port 22. Audit logs are written to CloudTrail and can be forwarded to CloudWatch Logs. |
 | **NAT Gateway count** | Variable (`1` dev, `3` prod) | One NAT is sufficient for dev and costs ~$32/month. For production, one per AZ ensures private subnet traffic survives an AZ failure. |
+| **Terraform layering** | Network and app as separate root modules | Blast radius isolation — networking rarely changes and should not be affected by app-layer operations. Enables independent change cadence and team ownership. The app layer reads network outputs via `terraform_remote_state`. |
 
 ---
 

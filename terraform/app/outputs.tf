@@ -3,11 +3,6 @@ output "alb_dns_name" {
   value       = aws_lb.main.dns_name
 }
 
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = aws_vpc.main.id
-}
-
 output "blue_asg_name" {
   description = "Name of the blue Auto Scaling Group"
   value       = aws_autoscaling_group.blue.name

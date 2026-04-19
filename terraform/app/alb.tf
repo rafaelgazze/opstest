@@ -3,7 +3,7 @@ resource "aws_lb" "main" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id
+  subnets            = local.public_subnet_ids
 
   drop_invalid_header_fields = true
 
@@ -16,7 +16,7 @@ resource "aws_lb_target_group" "blue" {
   name     = "${var.project}-${var.environment}-blue"
   port     = var.app_port
   protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  vpc_id   = local.vpc_id
 
   health_check {
     path                = "/hello"
@@ -39,7 +39,7 @@ resource "aws_lb_target_group" "green" {
   name     = "${var.project}-${var.environment}-green"
   port     = var.app_port
   protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  vpc_id   = local.vpc_id
 
   health_check {
     path                = "/hello"

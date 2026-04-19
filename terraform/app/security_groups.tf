@@ -1,7 +1,7 @@
 resource "aws_security_group" "alb" {
   name_prefix = "${var.project}-${var.environment}-alb-"
   description = "Security group for the application load balancer"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   tags = {
     Name = "${var.project}-${var.environment}-alb-sg"
@@ -35,7 +35,7 @@ resource "aws_security_group_rule" "alb_egress_to_ec2" {
 resource "aws_security_group" "ec2" {
   name_prefix = "${var.project}-${var.environment}-ec2-"
   description = "Security group for EC2 application instances"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   tags = {
     Name = "${var.project}-${var.environment}-ec2-sg"

@@ -15,11 +15,14 @@ env:
 
 jobs:
   validate:
-    name: Validate Terraform
+    name: Validate Terraform (${{ matrix.layer }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        layer: [network, app]
     defaults:
       run:
-        working-directory: terraform
+        working-directory: terraform/${{ matrix.layer }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,8 +51,8 @@ jobs:
       - name: Run checkov
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: .
-          config_file: .checkov.yml
+          directory: terraform/${{ matrix.layer }}
+          config_file: terraform/${{ matrix.layer }}/.checkov.yml
           framework: terraform
 
   build:

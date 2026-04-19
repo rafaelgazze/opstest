@@ -16,7 +16,7 @@ terraform init
 terraform apply
 ```
 
-Note the outputs — you will need `state_bucket_name` in the next step.
+Note the outputs — you will need `state_bucket_name` in the next steps.
 
 ```
 Outputs:
@@ -33,18 +33,19 @@ Before the first pipeline run, add your AWS account ID as a GitHub Actions secre
 1. Go to **Settings > Secrets and variables > Actions** in your repository.
 2. Create a secret named `AWS_ACCOUNT_ID` with the value of your 12-digit AWS account ID.
 
-The OIDC provider itself is managed as a Terraform resource (`aws_iam_openid_connect_provider.github` in `terraform/iam.tf`) and is created during `terraform apply`.
+The OIDC provider itself is managed as a Terraform resource (`aws_iam_openid_connect_provider.github` in `terraform/app/iam.tf`) and is created during `terraform apply`.
 
-### 3. Initialise the main Terraform working directory
+### 3. Deploy the network layer
 
-The backend is configured at `init` time via `-backend-config` flags (see `terraform/backend.tf`):
+The network layer creates the VPC, subnets, NAT gateway, internet gateway, and route tables. It rarely changes after initial setup.
 
 ```bash
-terraform -chdir=terraform init \
+terraform -chdir=terraform/network init \
   -backend-config="bucket=suchapp-terraform-state-<ACCOUNT_ID>" \
-  -backend-config="key=suchapp/dev/terraform.tfstate" \
-  -backend-config="region=eu-west-1" \
-  -backend-config="dynamodb_table=suchapp-terraform-locks"
+  -backend-config="key=suchapp/dev/network.tfstate" \
+  -backend-config="region=eu-west-1"
+
+terraform -chdir=terraform/network apply -var-file=envs/dev.tfvars
 ```
 
 Replace `<ACCOUNT_ID>` with your 12-digit AWS account ID.
@@ -76,10 +77,19 @@ Note the AMI ID printed at the end of the Packer output, for example:
 eu-west-1: ami-0abc1234def56789
 ```
 
-### 5. Apply the infrastructure
+### 5. Deploy the app layer
+
+The app layer creates the ALB, target groups, ASGs, launch template, security groups, IAM roles, and SSM parameters. It reads the network layer outputs via `terraform_remote_state`.
+
+Update `terraform/app/envs/dev.tfvars` with your actual state bucket name, then apply:
 
 ```bash
-terraform -chdir=terraform apply \
+terraform -chdir=terraform/app init \
+  -backend-config="bucket=suchapp-terraform-state-<ACCOUNT_ID>" \
+  -backend-config="key=suchapp/dev/app.tfstate" \
+  -backend-config="region=eu-west-1"
+
+terraform -chdir=terraform/app apply \
   -var-file=envs/dev.tfvars \
   -var="ami_id=ami-0abc1234def56789"
 ```
@@ -87,7 +97,7 @@ terraform -chdir=terraform apply \
 After a successful apply, the ALB DNS name is available in the outputs:
 
 ```bash
-terraform -chdir=terraform output alb_dns_name
+terraform -chdir=terraform/app output alb_dns_name
 ```
 
 ---
@@ -139,7 +149,7 @@ Scaling down blue
 **Automatic build and bake** (push to `main`):
 
 Pushing a commit to `main` triggers the `build.yml` workflow automatically. It:
-1. Validates Terraform (fmt, validate, tflint, checkov).
+1. Validates Terraform for both layers (fmt, validate, tflint, checkov).
 2. Builds the JAR with Maven.
 3. Bakes an AMI with Packer (using the commit SHA as `app_version`).
 4. Outputs the AMI ID as a workflow artifact.
@@ -178,22 +188,29 @@ Because the previously active ASG is only scaled down (not terminated), and the 
 
 Environments are isolated by Terraform state key and `.tfvars` file. The valid environment names are `dev`, `sta`, `acc`, and `prod` (enforced by a variable validation in `variables.tf`).
 
-```bash
-# 1. Copy and adjust the dev tfvars
-cp terraform/envs/dev.tfvars terraform/envs/sta.tfvars
-# Edit sta.tfvars: set environment="sta", adjust CIDRs, instance type, nat_gateway_count, etc.
+Both layers need separate init/apply for each environment:
 
-# 2. Initialise a new Terraform working directory for the new environment
-#    (use a different state key)
-terraform -chdir=terraform init \
+```bash
+# 1. Copy and adjust the dev tfvars for both layers
+cp terraform/network/envs/dev.tfvars terraform/network/envs/sta.tfvars
+cp terraform/app/envs/dev.tfvars terraform/app/envs/sta.tfvars
+# Edit both: set environment="sta", adjust CIDRs, instance type, nat_gateway_count, etc.
+
+# 2. Deploy the network layer for the new environment
+terraform -chdir=terraform/network init \
   -reconfigure \
   -backend-config="bucket=suchapp-terraform-state-<ACCOUNT_ID>" \
-  -backend-config="key=suchapp/sta/terraform.tfstate" \
-  -backend-config="region=eu-west-1" \
-  -backend-config="dynamodb_table=suchapp-terraform-locks"
+  -backend-config="key=suchapp/sta/network.tfstate" \
+  -backend-config="region=eu-west-1"
+terraform -chdir=terraform/network apply -var-file=envs/sta.tfvars
 
-# 3. Apply with the new tfvars
-terraform -chdir=terraform apply \
+# 3. Deploy the app layer for the new environment
+terraform -chdir=terraform/app init \
+  -reconfigure \
+  -backend-config="bucket=suchapp-terraform-state-<ACCOUNT_ID>" \
+  -backend-config="key=suchapp/sta/app.tfstate" \
+  -backend-config="region=eu-west-1"
+terraform -chdir=terraform/app apply \
   -var-file=envs/sta.tfvars \
   -var="ami_id=ami-0abc1234def56789"
 ```
@@ -209,6 +226,8 @@ For production:
 
 ## Teardown
 
+**Important**: Destroy the app layer first, then the network layer.
+
 **Scale down before destroying** to avoid ALB deregistration delays:
 
 ```bash
@@ -220,14 +239,14 @@ aws autoscaling update-auto-scaling-group \
   --auto-scaling-group-name suchapp-dev-green \
   --min-size 0 --max-size 0 --desired-capacity 0
 
-# 2. Wait for instances to terminate (optional but recommended)
-aws autoscaling wait group-in-service \
-  --auto-scaling-group-names suchapp-dev-blue suchapp-dev-green
-
-# 3. Destroy all resources
-terraform -chdir=terraform destroy \
+# 2. Destroy the app layer
+terraform -chdir=terraform/app destroy \
   -var-file=envs/dev.tfvars \
   -var="ami_id=ami-placeholder"
+
+# 3. Destroy the network layer
+terraform -chdir=terraform/network destroy \
+  -var-file=envs/dev.tfvars
 ```
 
 **Note**: The bootstrap S3 bucket has `prevent_destroy = true` in its lifecycle. To delete it you must first remove that protection by editing `bootstrap/main.tf`, then run `terraform destroy` in the bootstrap directory.
@@ -285,7 +304,7 @@ terraform -chdir=terraform destroy \
 **Symptom**: Some (but not all) green instances are healthy but the count never reaches desired.
 
 **Checks**:
-- Check the health check interval and thresholds in `terraform/alb.tf`. The ALB requires 2 consecutive successful checks at 15-second intervals (minimum 30s after registration).
+- Check the health check interval and thresholds in `terraform/app/alb.tf`. The ALB requires 2 consecutive successful checks at 15-second intervals (minimum 30s after registration).
 - The `health_check_grace_period = 120` on the ASG gives instances 2 minutes before the ASG's own health check fires. The deploy script waits up to 300 seconds.
 - If Spring Boot takes more than ~90 seconds to start (e.g. due to a slow database connection), increase `health_check_grace_period` and `MAX_WAIT` in `scripts/deploy.sh`.
 
@@ -297,7 +316,7 @@ terraform -chdir=terraform destroy \
 
 ```bash
 # Refresh state to sync with live resources
-terraform -chdir=terraform refresh \
+terraform -chdir=terraform/app refresh \
   -var-file=envs/dev.tfvars \
   -var="ami_id=ami-placeholder"
 ```

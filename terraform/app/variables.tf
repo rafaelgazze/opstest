@@ -19,29 +19,9 @@ variable "project" {
   default     = "suchapp"
 }
 
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
+variable "state_bucket" {
+  description = "S3 bucket name for Terraform remote state (used to read network layer outputs)"
   type        = string
-}
-
-variable "public_subnet_cidrs" {
-  description = "CIDR blocks for public subnets (one per AZ)"
-  type        = list(string)
-
-  validation {
-    condition     = length(var.public_subnet_cidrs) == 3
-    error_message = "Exactly 3 public subnet CIDRs required (one per AZ)."
-  }
-}
-
-variable "private_subnet_cidrs" {
-  description = "CIDR blocks for private subnets (one per AZ)"
-  type        = list(string)
-
-  validation {
-    condition     = length(var.private_subnet_cidrs) == 3
-    error_message = "Exactly 3 private subnet CIDRs required (one per AZ)."
-  }
 }
 
 variable "instance_type" {
@@ -77,15 +57,4 @@ variable "app_port" {
   description = "Port the Spring Boot application listens on"
   type        = number
   default     = 8080
-}
-
-variable "nat_gateway_count" {
-  description = "Number of NAT Gateways (1 for dev/cost, 3 for prod/HA)"
-  type        = number
-  default     = 1
-
-  validation {
-    condition     = contains([1, 3], var.nat_gateway_count)
-    error_message = "NAT gateway count must be 1 or 3."
-  }
 }

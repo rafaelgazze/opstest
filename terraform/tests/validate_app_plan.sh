@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLAN_JSON="${1:?Usage: validate_plan.sh <plan.json>}"
+PLAN_JSON="${1:?Usage: validate_app_plan.sh <plan.json>}"
 ERRORS=0
 
 assert_resource_count() {
@@ -17,13 +17,7 @@ assert_resource_count() {
   fi
 }
 
-echo "=== Terraform Plan Validation ==="
-
-# VPC and Networking
-assert_resource_count "aws_vpc" 1
-assert_resource_count "aws_subnet" 6
-assert_resource_count "aws_internet_gateway" 1
-assert_resource_count "aws_nat_gateway" 1
+echo "=== App Plan Validation ==="
 
 # Load Balancer
 assert_resource_count "aws_lb" 1
