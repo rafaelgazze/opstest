@@ -19,3 +19,13 @@ skip-check:
   - CKV_AWS_287
   # Target group HTTPS - internal traffic between ALB and EC2, HTTP is acceptable
   - CKV_AWS_378
+  # IAM permissions management without constraints - Packer needs broad EC2 perms
+  - CKV_AWS_355
+  # IAM resource exposure without constraints - deploy role needs ASG/ELB modify
+  - CKV_AWS_289
+  # ALB SG allows ingress on port 80 - ALB is public-facing by design
+  - CKV_AWS_260
+  # SSM using KMS CMK - default AWS-managed key is sufficient for dev
+  - CKV_AWS_337
+  # ALB HTTP to HTTPS redirect - HTTPS out of scope for dev
+  - CKV2_AWS_20
