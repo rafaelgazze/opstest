@@ -1,4 +1,4 @@
-name: Build & Validate
+name: Build, Bake & Deploy
 
 on:
   push:
@@ -113,3 +113,22 @@ jobs:
             grep 'artifact,0,id' | cut -d: -f2)
           echo "ami_id=$AMI_ID" >> "$GITHUB_OUTPUT"
           echo "Baked AMI: $AMI_ID"
+
+  deploy:
+    name: Deploy to dev
+    needs: [bake]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/suchapp-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy
+        run: |
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh dev "${{ needs.bake.outputs.ami_id }}"

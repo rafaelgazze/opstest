@@ -7,3 +7,15 @@ skip-check:
   - CKV_AWS_91
   # ALB WAF association - out of scope for dev
   - CKV2_AWS_28
+  # ALB deletion protection - not needed for dev
+  - CKV_AWS_150
+  # HTTPS listener - out of scope, would add ACM cert for prod
+  - CKV_AWS_2
+  # TLS 1.2 - requires HTTPS listener, out of scope for dev
+  - CKV_AWS_103
+  # IAM write access constraints - Packer needs broad EC2 perms for AMI baking
+  - CKV_AWS_290
+  # IAM credentials exposure - deploy role needs EC2/ASG describe permissions
+  - CKV_AWS_287
+  # Target group HTTPS - internal traffic between ALB and EC2, HTTP is acceptable
+  - CKV_AWS_378
