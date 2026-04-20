@@ -6,7 +6,7 @@ suchapp currently runs in a single AWS region (`eu-west-1`). This document descr
 
 ## Current Architecture Summary
 
-All infrastructure — VPC, ALB, ASGs, SSM parameters, and IAM — is deployed to a single region. The Terraform configuration is a flat root module in `terraform/`. The GitHub Actions pipeline bakes a single AMI in `eu-west-1` and deploys to one target environment.
+All infrastructure — VPC, ALB, ASGs, SSM parameters, and IAM — is deployed to a single region. The Terraform configuration is split into two layers: `terraform/network/` (VPC, subnets, NAT) and `terraform/app/` (ALB, ASGs, IAM, SSM). The GitHub Actions pipeline bakes a single AMI in `eu-west-1` and automatically deploys to dev.
 
 ```
 GitHub Actions
@@ -24,14 +24,18 @@ GitHub Actions
 
 ### Step 1: Extract Terraform into a reusable module
 
-Refactor the current `terraform/` root configuration into a module at `terraform/modules/suchapp-stack/`. The module accepts `region` as an input variable and manages all per-region resources.
+Refactor the current `terraform/network/` and `terraform/app/` layers into reusable modules at `terraform/modules/network/` and `terraform/modules/app/`. Each module accepts `region` as an input variable and manages all per-region resources for its layer.
 
 ```
 terraform/
 ├── modules/
-│   └── suchapp-stack/
+│   ├── network/
+│   │   ├── main.tf
+│   │   ├── vpc.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   └── app/
 │       ├── main.tf
-│       ├── vpc.tf
 │       ├── alb.tf
 │       ├── asg.tf
 │       ├── iam.tf
@@ -40,7 +44,7 @@ terraform/
 │       ├── variables.tf
 │       └── outputs.tf
 └── root/
-    ├── main.tf          # instantiates module per region
+    ├── main.tf          # instantiates modules per region
     ├── variables.tf
     └── outputs.tf
 ```

@@ -1,6 +1,6 @@
 # suchapp — AWS Blue/Green Deployment Pipeline
 
-A production-ready pipeline for deploying a Spring Boot application ("suchapp") to bare EC2 instances on AWS using a blue/green strategy. Infrastructure is fully defined in Terraform, AMIs are baked with Packer, and deployments are driven by a shell script that swaps an ALB listener between two Auto Scaling Groups with zero downtime. GitHub Actions handles CI (validate, build, bake) and CD (manual dispatch). No long-lived AWS credentials are used anywhere — GitHub authenticates via OIDC federation.
+A production-ready pipeline for deploying a Spring Boot application ("suchapp") to bare EC2 instances on AWS using a blue/green strategy. Infrastructure is fully defined in Terraform, AMIs are baked with Packer, and deployments are driven by a shell script that swaps an ALB listener between two Auto Scaling Groups with zero downtime. GitHub Actions handles the full CI/CD pipeline: pushing to `main` automatically validates Terraform, builds the JAR, bakes an AMI, and deploys via blue/green swap. A manual deploy workflow is also available for rollbacks. No long-lived AWS credentials are used anywhere — GitHub authenticates via OIDC federation.
 
 ---
 
@@ -174,8 +174,8 @@ opstest/
 ├── scripts/
 │   └── deploy.sh                   # Blue/green deploy script
 ├── .github/workflows/
-│   ├── build.yml                   # Push: validate TF + build JAR + bake AMI
-│   ├── deploy.yml                  # Manual dispatch: blue/green swap
+│   ├── build.yml                   # Push: validate TF + build JAR + bake AMI + deploy
+│   ├── deploy.yml                  # Manual dispatch: rollback or deploy specific AMI
 │   └── codeql-analysis.yml         # CodeQL security scanning
 └── docs/
     ├── architecture.md

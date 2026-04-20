@@ -146,20 +146,24 @@ Scaling down blue
 
 ### Via GitHub Actions
 
-**Automatic build and bake** (push to `main`):
+**Automatic build, bake, and deploy** (push to `main`):
 
 Pushing a commit to `main` triggers the `build.yml` workflow automatically. It:
 1. Validates Terraform for both layers (fmt, validate, tflint, checkov).
 2. Builds the JAR with Maven.
 3. Bakes an AMI with Packer (using the commit SHA as `app_version`).
-4. Outputs the AMI ID as a workflow artifact.
+4. Deploys to dev automatically by running `scripts/deploy.sh` with the new AMI.
 
-**Manual deploy** (workflow dispatch):
+The full pipeline is chained: validate → build → bake → deploy. If any step fails, subsequent steps are skipped.
+
+**Manual deploy / rollback** (workflow dispatch):
+
+The `deploy.yml` workflow is available for deploying a specific AMI (e.g. rolling back to a previous version):
 
 1. Go to **Actions > Deploy** in the GitHub repository.
 2. Click **Run workflow**.
 3. Select the target environment (e.g. `dev`).
-4. Enter the AMI ID produced by the build workflow.
+4. Enter the AMI ID to deploy.
 5. Click **Run workflow**.
 
 The deploy workflow assumes the `suchapp-github-actions` IAM role via OIDC and runs `scripts/deploy.sh`.

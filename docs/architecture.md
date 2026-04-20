@@ -161,7 +161,7 @@ IMDSv2 is enforced on all instances via the launch template (`http_tokens = requ
 ### State and secrets
 
 - Terraform state is stored in S3 with SSE-KMS and versioning enabled. Public access is blocked at the bucket level.
-- State locking uses DynamoDB to prevent concurrent applies.
+- State locking uses S3 native locking (`use_lockfile = true` in the backend configuration). A DynamoDB table is also available as a fallback.
 - Application secrets are stored as `SecureString` parameters in SSM. The `value` field in Terraform uses `lifecycle { ignore_changes = [value] }` so Terraform does not revert out-of-band secret rotations.
 
 ### AMI hardening
