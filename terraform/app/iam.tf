@@ -151,6 +151,7 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "ec2:CreateLaunchTemplateVersion",
           "ec2:DescribeLaunchTemplates",
           "ec2:DescribeLaunchTemplateVersions",
+          "ec2:RunInstances",
           "elasticloadbalancing:DescribeTargetGroups",
           "elasticloadbalancing:DescribeTargetHealth",
           "elasticloadbalancing:DescribeListeners",
@@ -158,6 +159,14 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "elasticloadbalancing:ModifyListener"
         ]
         Resource = "*"
+      },
+      {
+        Sid    = "PassRole"
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole"
+        ]
+        Resource = aws_iam_role.ec2.arn
       },
       {
         Sid    = "SSMRead"
