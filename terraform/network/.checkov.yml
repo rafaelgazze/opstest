@@ -2,3 +2,10 @@ framework:
   - terraform
 directory:
   - .
+skip-check:
+  # Public subnets need public IPs for ALB and NAT gateway
+  - CKV_AWS_130
+  # VPC flow logging - out of scope for dev, would enable for prod
+  - CKV2_AWS_11
+  # Default security group restriction - not used, custom SGs are applied
+  - CKV2_AWS_12
