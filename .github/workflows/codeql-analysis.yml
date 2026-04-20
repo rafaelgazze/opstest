@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '0 10 * * 4'
 
+permissions:
+  security-events: write
+  contents: read
+
 jobs:
   CodeQL-Build:
     runs-on: ubuntu-latest
